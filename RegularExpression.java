@@ -282,14 +282,46 @@ public class RegularExpression {
     	return nfaC;        
     }
 
-    // TODO: Complete this method so that it returns the nfa resulting from "staring" the input nfa.
     private NFA star(NFA nfa) {
-        return null;
+        HashSet<String> newStates = new HashSet<>(Arrays.asList(nfa.getStates()));
+        String newStartState = "start" + stateCounter++;
+        newStates.add(newStartState);
+
+        char[] newAlphList = nfa.getAlphabet();
+
+        HashMap<String, HashMap<Character, HashSet<String>>> newTransitions = new HashMap<>(nfa.getTransitions());
+        HashSet<String> startTransitions = new HashSet<>(Collections.singleton(nfa.getStartState()));
+
+        HashMap<Character, HashSet<String>> startStateTransitions = new HashMap<>();
+        startStateTransitions.put('e', startTransitions);
+        newTransitions.put(newStartState, startStateTransitions);
+
+        // add epsilon transitions from original accept states back to the original start
+        for (String acceptState : nfa.getAcceptStates()) {
+            HashMap<Character, HashSet<String>> transitions = newTransitions.getOrDefault(acceptState, new HashMap<>());
+            HashSet<String> epsilonTransitions = transitions.getOrDefault('e', new HashSet<>());
+            epsilonTransitions.add(nfa.getStartState());
+            transitions.put('e', epsilonTransitions);
+            newTransitions.put(acceptState, transitions);
+        }
+
+        String[] newAcceptStates = Arrays.copyOf(nfa.getAcceptStates(), nfa.getAcceptStates().length + 1);
+        newAcceptStates[newAcceptStates.length - 1] = newStartState;
+
+        String[] newStatesArray = newStates.toArray(new String[0]);
+
+        return new NFA(newStatesArray, newAlphList, newTransitions, newStartState, newAcceptStates);
     }
 
-    // TODO: Complete this method so that it returns the nfa resulting from "plussing" the input nfa.
     private NFA plus(NFA nfa) {
-        return null;
+
+        NFA starredNFA = star(nfa);
+
+        // concatenate the original NFA with the starred NFA to make at least one occurrence.
+        NFA resultingNFA = concatenate(nfa, starredNFA);
+
+        return new NFA(starredNFA.getStates(), starredNFA.getAlphabet(), starredNFA.getTransitions(),
+                starredNFA.getStartState(), nfa.getAcceptStates());
     }
 
     // TODO: Complete this method so that it returns the nfa that only accepts the character c.
